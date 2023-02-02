@@ -1,0 +1,181 @@
+﻿<!DOCTYPE html>
+<html lang="">
+<head>
+    <meta charset="utf-8" />
+    <title>WebApi</title>
+    <style>
+        td {padding:5px;}
+        button{margin: 5px;}
+        h2{text-align: center}
+    </style>
+</head>
+<body>
+<h2>List of products:</h2>
+<div>
+    <input type="hidden" id="itemId" />
+    <p>
+        Name:<br/>
+        <input id="itemName" />
+    </p>
+    <p>
+        Price:<br />
+        <input id="itemPrice" type="number" />
+    </p>
+    <p>
+        <button id="saveBtn">Save</button>
+        <button id="resetBtn">Reset</button>
+    </p>
+</div>
+<table>
+    <thead><tr><th>Name</th><th>Price</th><th></th></tr></thead>
+    <tbody>
+    </tbody>
+</table>
+
+<script>
+    
+    async function getItems() {
+       
+        const response = await fetch("/api/items", {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+        
+        if (response.ok === true) {
+            
+            const items = await response.json();
+            const rows = document.querySelector("tbody");
+            
+            items.forEach(item => rows.append(row(item)));
+        }
+    }
+    
+    async function getItem(id) {
+        const response = await fetch(`/api/items/${id}`, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+        if (response.ok === true) {
+            const item = await response.json();
+            document.getElementById("itemId").value = item.id;
+            document.getElementById("itemName").value = item.name;
+            document.getElementById("itemPrice").value = item.price;
+        }
+        else {
+            
+            const error = await response.json();
+            console.log(error.message); 
+        }
+    }
+    
+    async function createItem(itemName, itemPrice) {
+
+        const response = await fetch("api/items", {
+            method: "POST",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: itemName,
+                price: itemPrice
+            })
+        });
+        if (response.ok === true) {
+            const item = await response.json();
+            document.querySelector("tbody").append(row(item));
+        }
+        else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+    
+    async function editItem(itemId, itemName, itemPrice) {
+        const response = await fetch("api/items", {
+            method: "PUT",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id: itemId,
+                name: itemName,
+                price: parseInt(itemPrice, 10)
+            })
+        });
+        if (response.ok === true) {
+            const item = await response.json();
+            document.querySelector(`tr[data-rowid='${item.id}']`).replaceWith(row(item));
+        }
+        else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+    
+    async function deleteItem(id) {
+        const response = await fetch(`/api/items/${id}`, {
+            method: "DELETE",
+            headers: { "Accept": "application/json" }
+        });
+        if (response.ok === true) {
+            const item = await response.json();
+            document.querySelector(`tr[data-rowid='${item.id}']`).remove();
+        }
+        else {
+            const error = await response.json();
+            console.log(error.message);
+        }
+    }
+
+    function reset() {
+        document.getElementById("itemId").value =
+            document.getElementById("itemName").value =
+                document.getElementById("itemPrice").value = "";
+    }
+    
+    function row(item) {
+
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-rowid", item.id);
+
+        const nameTd = document.createElement("td");
+        nameTd.append(item.name);
+        tr.append(nameTd);
+
+        const priceTd = document.createElement("td");
+        priceTd.append(item.price);
+        tr.append(priceTd);
+
+        const linksTd = document.createElement("td");
+
+        const editLink = document.createElement("button");
+        editLink.append("Change");
+        editLink.addEventListener("click", async() => await getItem(item.id));
+        linksTd.append(editLink);
+
+        const removeLink = document.createElement("button");
+        removeLink.append("Delete");
+        removeLink.addEventListener("click", async () => await deleteItem(item.id));
+
+        linksTd.append(removeLink);
+        tr.appendChild(linksTd);
+
+        return tr;
+    }
+    
+    document.getElementById("resetBtn").addEventListener("click", () =>  reset());
+
+   
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+
+        const id = document.getElementById("itemId").value;
+        const name = document.getElementById("itemName").value;
+        const price = document.getElementById("itemPrice").value;
+        if (id === "")
+            await createItem(name, price);
+        else
+            await editItem(id, name, price);
+        reset();
+    });
+
+    
+    getItems();
+</script>
+</body>
+</html>
